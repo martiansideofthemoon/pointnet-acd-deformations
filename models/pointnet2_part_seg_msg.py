@@ -64,9 +64,9 @@ class get_model(nn.Module):
             dim=1
         )
         all_feats_classify_logits = self.fc_classify(all_feats)
+        return x, (l1_points, l2_points, l3_points), feat, all_feats_classify_logits
         ### CODE ENDS
 
-        return x, (l1_points, l2_points, l3_points), feat, all_feats_classify_logits
 
 
 class get_loss(nn.Module):
