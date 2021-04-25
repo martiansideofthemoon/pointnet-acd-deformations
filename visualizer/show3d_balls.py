@@ -211,8 +211,10 @@ if __name__ == '__main__':
 
     from ShapeNetDataLoader import ACDSelfSupDataset
     root = '../data/ACDv2'
+    ### CODE STARTS
     dataset1 = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False)
     dataset2 = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False, perturb_amount=1.0)
+    ### CODE ENDS
 
     idx = np.random.randint(0, len(dataset1))
 

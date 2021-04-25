@@ -377,7 +377,9 @@ class ACDSelfSupDataset(Dataset):
         point_set = point_set[choice, :]  # resample
         seg = seg[choice]
 
+        ### CODE STARTS
         return point_set, cls, seg, valid_cls
+        ### CODE ENDS
 
     def __len__(self):
         return len(self.datapath)
