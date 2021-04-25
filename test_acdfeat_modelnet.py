@@ -228,7 +228,9 @@ def extract_feats(model, loader, do_sqrt=True, pool='mean', do_sa3=False, do_svm
                 if batch_id > len(loader) * subset:
                     break
 
-            _, (l1_points, l2_points, l3_points), feat = model(points, category_label)            
+            ### CODE STARTS
+            _, (l1_points, l2_points, l3_points), feat, _ = model(points, category_label)            
+            ### CODE ENDS
             if pool == 'mean':
                 l1_feat, l2_feat, fc_feat = l1_points.mean(2), l2_points.mean(2), feat.mean(2)
             elif pool == 'max':

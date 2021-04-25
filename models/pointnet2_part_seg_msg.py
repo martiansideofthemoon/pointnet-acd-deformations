@@ -24,6 +24,7 @@ class get_model(nn.Module):
         self.bn1 = nn.BatchNorm1d(128)
         self.drop1 = nn.Dropout(0.5)
         self.conv2 = nn.Conv1d(128, num_classes, 1)
+        self.fc_classify = nn.Linear(512, 2)
 
     def forward(self, xyz, cls_label):
         # Set Abstraction layers
@@ -37,6 +38,7 @@ class get_model(nn.Module):
         l1_xyz, l1_points = self.sa1(l0_xyz, l0_points)
         l2_xyz, l2_points = self.sa2(l1_xyz, l1_points)
         l3_xyz, l3_points = self.sa3(l2_xyz, l2_points)
+
         # Feature Propagation layers
         l2_points = self.fp3(l2_xyz, l3_xyz, l2_points, l3_points)
         l1_points = self.fp2(l1_xyz, l2_xyz, l1_points, l2_points)
@@ -52,7 +54,19 @@ class get_model(nn.Module):
         x = self.conv2(x)
         x = F.log_softmax(x, dim=1)        
         x = x.permute(0, 2, 1)
-        return x, (l1_points, l2_points, l3_points), feat
+
+        ### CODE STARTS
+        # code adapted from test_acd_modelnet.py file's extract_features(...), with modifications
+        # main modifications are no normalization & addition of a FC layer to project it to binary classification task
+        l1_feat, l2_feat, fc_feat = l1_points.mean(2), l2_points.mean(2), feat.mean(2)
+        all_feats = torch.cat(
+            [l1_feat, l2_feat, fc_feat],
+            dim=1
+        )
+        all_feats_classify_logits = self.fc_classify(all_feats)
+        ### CODE ENDS
+
+        return x, (l1_points, l2_points, l3_points), feat, all_feats_classify_logits
 
 
 class get_loss(nn.Module):

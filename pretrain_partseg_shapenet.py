@@ -1,7 +1,7 @@
 """
 
-Pre-train a network on Approximate Convex Decompisitions using a pairwise 
-contrastive loss. 
+Pre-train a network on Approximate Convex Decompisitions using a pairwise
+contrastive loss.
 
 
 Author: AruniRC
@@ -38,11 +38,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 
-seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 
-                'Rocket': [41, 42, 43], 'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 
-                'Cap': [6, 7], 'Skateboard': [44, 45, 46], 'Mug': [36, 37], 
-                'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27], 
-                'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40], 
+seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35],
+                'Rocket': [41, 42, 43], 'Car': [8, 9, 10, 11], 'Laptop': [28, 29],
+                'Cap': [6, 7], 'Skateboard': [44, 45, 46], 'Mug': [36, 37],
+                'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27],
+                'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40],
                 'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
 seg_label_to_cat = {} # {0:Airplane, 1:Airplane, ...49:Table}
 for cat in seg_classes.keys():
@@ -87,10 +87,14 @@ def parse_args():
     parser.add_argument('--lmbda', type=float,  default=1.0, help='weight on self-sup loss [default: 1.0]')
     parser.add_argument('--n_cls_selfsup', type=int,  default=-1, help='self-sup samples per class [default: -1, all samples]')
     parser.add_argument('--ss_dataset', type=str, default='acd', help='self-sup dataset [default: dummy]')
-    parser.add_argument('--ss_path', type=str, default='/srv/data2/mgadelha/ShapeNetACD/', help='self-sup dataset location [default: dummy]')
+    parser.add_argument('--ss_path', type=str, default='/mnt/nfs/work1/miyyer/kalpesh/projects/PointCloudLearningACD/data/ACDv2', help='self-sup dataset location [default: dummy]')
     parser.add_argument('--retain_overlaps', action='store_true', default=False, help='keep overlapping shapes with labeled data [default: False]')
     # few-shot setting
     parser.add_argument('--k_shot', type=int,  default=-1, help='few shot samples [default: -1, all samples]')
+
+    ### CODE STARTS
+    parser.add_argument('--perturb_amount', type=float,  default=0.0, help='few shot samples [default: -1, all samples]')
+    ### CODE ENDS
 
     return parser.parse_args()
 
@@ -117,8 +121,8 @@ def main(args):
     experiment_dir.mkdir(exist_ok=True)
     dir_name = args.model + '_ShapeNet' + \
                 '_k-%d_seed-%d_lr-%.6f_lr-step-%d_lr-decay-%.2f_wt-decay-%.6f_l2norm-%d' \
-                % ( args.k_shot, args.seed, args.learning_rate, 
-                    args.step_size, args.lr_decay, args.decay_rate, 
+                % ( args.k_shot, args.seed, args.learning_rate,
+                    args.step_size, args.lr_decay, args.decay_rate,
                     int(args.l2_norm) )
     if args.normal:
         dir_name = dir_name + '_normals'
@@ -132,7 +136,12 @@ def main(args):
         dir_name = dir_name + '_rotation-z-45'
 
     if args.random_anisotropic_scale:
-        dir_name = dir_name + '_aniso-scale'        
+        dir_name = dir_name + '_aniso-scale'
+
+    ### CODE STARTS
+    if args.perturb_amount:
+        dir_name = dir_name + f"{args.perturb_amount:.2f}_perturb_amount"
+    ### CODE ENDS
 
     experiment_dir = experiment_dir.joinpath(dir_name)
 
@@ -164,15 +173,15 @@ def main(args):
     # --------------------------------------------------------------------------
     root = 'data/shapenetcore_partanno_segmentation_benchmark_v0_normal/'
 
-    TRAIN_DATASET = PartNormalDataset(root = root, npoints=args.npoint, split='trainval', 
+    TRAIN_DATASET = PartNormalDataset(root = root, npoints=args.npoint, split='trainval',
                                       normal_channel=args.normal, k_shot=args.k_shot)
-    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batch_size, 
+    trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batch_size,
                                                   shuffle=True, num_workers=4)
     trainDataIterator = iter(trainDataLoader)
 
-    TEST_DATASET = PartNormalDataset(root = root, npoints=args.npoint, split='test', 
+    TEST_DATASET = PartNormalDataset(root = root, npoints=args.npoint, split='test',
                                      normal_channel=args.normal)
-    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batch_size, 
+    testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batch_size,
                                                  shuffle=False, num_workers=4)
     log_string("The number of training data is: %d" % len(TRAIN_DATASET))
     log_string("The number of test data is: %d" %  len(TEST_DATASET))
@@ -191,38 +200,46 @@ def main(args):
 
         if args.ss_dataset == 'dummy':
             log_string('Using "dummy" self-supervision dataset (rest of labeled ShapeNetSeg)')
-            SELFSUP_DATASET = SelfSupPartNormalDataset(root = root, npoints=args.npoint, 
-                                        split='trainval', normal_channel=args.normal, 
+            SELFSUP_DATASET = SelfSupPartNormalDataset(root = root, npoints=args.npoint,
+                                        split='trainval', normal_channel=args.normal,
                                         k_shot=args.n_cls_selfsup, labeled_fns=labeled_fns)
         elif args.ss_dataset == 'acd':
             log_string('Using "ACD" self-supervision dataset (ShapeNet Seg)')
             ACD_ROOT = args.ss_path
-            SELFSUP_DATASET = ACDSelfSupDataset(root = ACD_ROOT, npoints=args.npoint, 
-                                                normal_channel=args.normal, 
-                                                k_shot=args.n_cls_selfsup, 
-                                                exclude_fns=labeled_fns, 
+            ### CODE STARTS
+            SELFSUP_DATASET = ACDSelfSupDataset(root = ACD_ROOT, npoints=args.npoint,
+                                                normal_channel=args.normal,
+                                                k_shot=args.n_cls_selfsup,
+                                                exclude_fns=labeled_fns,
+                                                perturb_amount=args.perturb_amount,
                                                 use_val = True)
+            ### CODE ENDS
             log_string('\t %d samples' % len(SELFSUP_DATASET))
-            selfsup_train_fns = list(itertools.chain(*SELFSUP_DATASET.meta.values()))            
+            selfsup_train_fns = list(itertools.chain(*SELFSUP_DATASET.meta.values()))
             log_string('Val dataset for self-sup')
-            SELFSUP_VAL = ACDSelfSupDataset(root = ACD_ROOT, npoints=args.npoint, 
-                                        normal_channel=args.normal, class_choice='Airplane', 
+            ### CODE STARTS
+            SELFSUP_VAL = ACDSelfSupDataset(root = ACD_ROOT, npoints=args.npoint,
+                                        normal_channel=args.normal, class_choice='Airplane',
                                         k_shot=args.n_cls_selfsup, use_val=False,
+                                        perturb_amount=args.perturb_amount,
                                         exclude_fns=selfsup_train_fns + labeled_fns)
+            ### CODE ENDS
             log_string('\t %d samples' % len(SELFSUP_VAL))
 
-        selfsupDataLoader = torch.utils.data.DataLoader(SELFSUP_DATASET, batch_size=args.batch_size, 
-                                                        shuffle=True, num_workers=4)        
+        selfsupDataLoader = torch.utils.data.DataLoader(SELFSUP_DATASET, batch_size=args.batch_size,
+                                                        shuffle=True, num_workers=4)
         selfsupIterator = iter(selfsupDataLoader)
-        selfsupValLoader = torch.utils.data.DataLoader(SELFSUP_VAL, batch_size=args.batch_size, 
+        selfsupValLoader = torch.utils.data.DataLoader(SELFSUP_VAL, batch_size=args.batch_size,
                                                         shuffle=False, num_workers=4)
 
     log_string('Load ModelNet dataset for validation')
     DATA_PATH = 'data/modelnet40_normal_resampled/'
-    MN_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.npoint, 
-                                    split='train', normal_channel=args.normal)
-    modelnetLoader = torch.utils.data.DataLoader(MN_DATASET, batch_size=args.batch_size, 
-                                                    shuffle=True, num_workers=4)
+
+    if args.modelnet_val:
+        MN_DATASET = ModelNetDataLoader(root=DATA_PATH, npoint=args.npoint,
+                                        split='train', normal_channel=args.normal)
+        modelnetLoader = torch.utils.data.DataLoader(MN_DATASET, batch_size=args.batch_size,
+                                                        shuffle=True, num_workers=4)
 
 
     # --------------------------------------------------------------------------
@@ -232,13 +249,17 @@ def main(args):
     shutil.copy('models/%s.py' % args.model, str(experiment_dir))
     shutil.copy('models/pointnet_util.py', str(experiment_dir))
 
+    ### CODE STARTS
     if args.model == 'dgcnn':
         classifier = MODEL.get_model(num_part, normal_channel=args.normal, k=args.dgcnn_k).cuda()
     else:
         classifier = MODEL.get_model(num_part, normal_channel=args.normal).cuda()
-    
+    ### CODE ENDS
 
     criterion = MODEL.get_loss().cuda()
+    ### CODE STARTS
+    valid_shape_criterion = nn.CrossEntropyLoss()
+    ### CODE ENDS
 
     if args.selfsup:
         selfsupCriterion = MODEL.get_selfsup_loss(margin=args.margin).cuda()
@@ -308,7 +329,12 @@ def main(args):
         log_string('Learning rate:%f' % lr)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
-        mean_loss = []
+
+        ### CODE STARTS
+        mean_ss_loss = []
+        mean_valid_shp_loss = []
+        ### CODE ENDS
+
         momentum = MOMENTUM_ORIGINAL * (MOMENTUM_DECAY ** (epoch // MOMENTUM_DECAY_STEP))
         if momentum < 0.01:
             momentum = 0.01
@@ -331,13 +357,13 @@ def main(args):
             if DEBUG and i > 10:
                 break
 
-            points, label, target = data_ss  # (points: bs x 3 x n_pts, label: bs x 1, target: bs x n_pts)
+            points, label, target, valid_shape_label = data_ss  # (points: bs x 3 x n_pts, label: bs x 1, target: bs x n_pts)
             points = points.data.numpy()
             points[:,:, 0:3] = provider.random_scale_point_cloud(points[:,:, 0:3])
             points[:,:, 0:3] = provider.shift_point_cloud(points[:,:, 0:3])
 
             if args.random_anisotropic_scale:
-                points[:,:, 0:3] = provider.random_anisotropic_scale_point_cloud(points[:,:, 0:3], 
+                points[:,:, 0:3] = provider.random_anisotropic_scale_point_cloud(points[:,:, 0:3],
                                     scale_low=0.8, scale_high=1.25)
 
             # pts = torch.Tensor(points)
@@ -346,12 +372,13 @@ def main(args):
 
             if args.rotation_z:
                 points[:,:, 0:3] = provider.rotate_point_cloud_y(points[:,:, 0:3])
-            
-            if args.rotation_z_45:   
+
+            if args.rotation_z_45:
                 points[:,:, 0:3] = provider.rotate_point_cloud_y_pi4(points[:,:, 0:3])
 
             points = torch.Tensor(points)
             points, label, target = points.float().cuda(), label.long().cuda(), target.long().cuda()
+            valid_shape_label = valid_shape_label.long().cuda()
             points = points.transpose(2, 1)
             # np.save(osp.join(experiment_dir, 'pts_z-rot.npy'), points.cpu().numpy())
             # np.save(osp.join(experiment_dir, 'target.npy'), target.cpu().numpy())
@@ -362,20 +389,32 @@ def main(args):
             optimizer.zero_grad()
             classifier = classifier.train()
 
-            _, _, feat = classifier(points, category_label) # feat: [bs x ndim x npts]
+            ### CODE STARTS
+            _, _, feat, agg_valid_feats = classifier(points, category_label) # feat: [bs x ndim x npts]
+            valid_shape_loss = valid_shape_criterion(agg_valid_feats, valid_shape_label.squeeze(dim=1))
+            ss_loss = selfsupCriterion(feat, target)
 
-            ss_loss = selfsupCriterion(feat, target) * args.lmbda
-            ss_loss.backward()
+            if args.perturb_amount > 0.0:
+                total_loss = ss_loss + valid_shape_loss * args.lmbda
+            else:
+                total_loss = ss_loss
+            ### CODE ENDS
+
+            total_loss.backward()
             optimizer.step()
-            mean_loss.append(ss_loss.item())
+            mean_ss_loss.append(ss_loss.item())
+            mean_valid_shp_loss.append(valid_shape_loss.item())
             log_value('selfsup_loss_iter', ss_loss.data, epoch*num_iters + i + 1)
+            log_value('valid_loss_iter', valid_shape_loss.data, epoch*num_iters + i + 1)
 
-
-        train_loss_epoch = np.mean(mean_loss)
+        train_loss_epoch = np.mean(mean_ss_loss)
         log_string('Self-sup loss is: %.5f' % train_loss_epoch)
         log_value('selfsup_loss_epoch', train_loss_epoch, epoch)
 
-        # # # DEBUG: 
+        train_loss_epoch = np.mean(mean_valid_shp_loss)
+        log_string('Valid shape loss is: %.5f' % train_loss_epoch)
+
+        # # # DEBUG:
         # with torch.no_grad():
         #     sa3_wt = classifier.sa3.mlp_convs[2].weight.mean()
         #     log_string('SA3 avg wt is: %.5f' % sa3_wt.item())
@@ -386,8 +425,8 @@ def main(args):
         log_string('Validation: ACD on ShapeNet')
         with torch.no_grad():
             total_val_loss = 0
-            for batch_id, (points, label, target) in tqdm(enumerate(selfsupValLoader), 
-                                                          total=len(selfsupValLoader), 
+            for batch_id, (points, label, target) in tqdm(enumerate(selfsupValLoader),
+                                                          total=len(selfsupValLoader),
                                                           smoothing=0.9):
                 if DEBUG and i > 10:
                     break
@@ -396,7 +435,7 @@ def main(args):
                 points = points.transpose(2, 1)
                 category_label = torch.zeros([label.shape[0], 1, num_classes]).cuda()
                 classifier = classifier.eval()
-                _, _, feat = classifier(points, category_label)
+                _, _, feat, _ = classifier(points, category_label)
                 val_loss = selfsupCriterion(feat, target)
                 total_val_loss += val_loss.data.cpu().item()
             avg_val_loss = total_val_loss / len(selfsupValLoader)
@@ -410,16 +449,16 @@ def main(args):
                 log_string('Extract features on ModelNet40')
                 if args.model == 'pointnet_part_seg':
                     feat_train, label_train = extract_feats_pointnet(
-                                                classifier, modelnetLoader, subset=0.5) 
+                                                classifier, modelnetLoader, subset=0.5)
                 elif args.model == 'pointnet2_part_seg_msg':
                     feat_train, label_train = extract_feats(
-                                                classifier, modelnetLoader, subset=0.5) 
+                                                classifier, modelnetLoader, subset=0.5)
                 else:
                     raise ValueError
-                log_string('Training data: %d samples, %d features' % feat_train.shape) 
+                log_string('Training data: %d samples, %d features' % feat_train.shape)
                 start_time = time.time()
                 log_string('Training SVM on ModelNet40')
-                svm, best_C, best_score = cross_val_svm(feat_train, label_train, c_min=100, 
+                svm, best_C, best_score = cross_val_svm(feat_train, label_train, c_min=100,
                                                         c_max=501, c_step=20, verbose=False)
                 elapsed_time = time.time() - start_time
             log_string('ModelNet val Accuracy: %f (elapsed: %f seconds)' % (best_score, elapsed_time))
@@ -457,7 +496,7 @@ def main(args):
         log_value('train_lr', lr, epoch)
         log_value('train_bn_momentum', momentum, epoch)
 
-        log_string('Epoch %d Self-sup train loss: %f  Val loss: %f ' % (epoch+1, 
+        log_string('Epoch %d Self-sup train loss: %f  Val loss: %f ' % (epoch+1,
                                                                         train_loss_epoch,
                                                                         avg_val_loss))
 

@@ -251,9 +251,10 @@ class SelfSupPartNormalDataset(Dataset):
 
 
 class ACDSelfSupDataset(Dataset):
-    def __init__(self, root = '/srv/data2/mgadelha/ShapeNetACD/', 
+    def __init__(self, root = './data/ACDv2', 
                  npoints=2500, class_choice=None, normal_channel=False, 
-                 k_shot=-1, exclude_fns=[], splits=None, use_val=False):
+                 k_shot=-1, exclude_fns=[], splits=None, use_val=False,
+                 perturb_amount=0.0):
         '''
             Expected self-supervised dataset folder structure:
 
@@ -272,6 +273,9 @@ class ACDSelfSupDataset(Dataset):
 
         '''
         self.npoints = npoints
+        ### CODE STARTS
+        self.perturb_amount = perturb_amount
+        ### CODE ENDS
         self.root = root
         self.normal_channel = normal_channel
         self.k_shot = k_shot
@@ -344,20 +348,39 @@ class ACDSelfSupDataset(Dataset):
             seg = data[:, -1].astype(np.int32)
             if len(self.cache) < self.cache_size:
                 self.cache[index] = (point_set, cls, seg)
+
+        ### CODE STARTS
+        # Decide whether or not to perturb the point cloud
+        perturb = False
+        if self.perturb_amount > 0.0 and random.uniform(0, 1) <= self.perturb_amount:
+            perturb = True
+
+        # Perturbation Type #1 --- randomly drop off an ACD component
+        if perturb:
+            rand_seg = random.randint(np.min(seg), np.max(seg))
+            other_pts = seg != rand_seg
+            point_set = point_set[other_pts]
+            seg = seg[other_pts]
+            valid_cls = np.array([0])
+        else:
+            valid_cls = np.array([1])
+        # Perturbation Type #2 --- randomly scale an ACD component
+
+        # Perturbation Type #3 --- randomly rigidly rotate an ACD component
+
+        ### CODE ENDS
+
+
         point_set[:, 0:3] = pc_normalize(point_set[:, 0:3])
 
         choice = np.random.choice(len(seg), self.npoints, replace=True)
         point_set = point_set[choice, :]  # resample
         seg = seg[choice]
 
-        return point_set, cls, seg
+        return point_set, cls, seg, valid_cls
 
     def __len__(self):
         return len(self.datapath)
-
-
-
-
 
 
 class MultiACDSelfSupDataset(Dataset):
