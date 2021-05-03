@@ -69,7 +69,7 @@ class PartNormalDataset(Dataset):
                 exit(-1)            
 
             if self.k_shot > 0 and len(fns) > self.k_shot:
-                fns = random.sample(fns, self.k_shot) # random few-shot samples                
+                fns = random.sample(fns, self.k_shot) # random few-shot samples
                 pass
 
             # print(os.path.basename(fns))
@@ -243,18 +243,11 @@ class SelfSupPartNormalDataset(Dataset):
         return len(self.datapath)
 
 
-
-
-
-
-
-
-
 class ACDSelfSupDataset(Dataset):
     def __init__(self, root = './data/ACDv2', 
                  npoints=2500, class_choice=None, normal_channel=False, 
                  k_shot=-1, exclude_fns=[], splits=None, use_val=False,
-                 perturb_amount=0.0):
+                 perturb_amount=1.0, scale_by=2.5):
         '''
             Expected self-supervised dataset folder structure:
 
@@ -275,6 +268,7 @@ class ACDSelfSupDataset(Dataset):
         self.npoints = npoints
         ### CODE STARTS
         self.perturb_amount = perturb_amount
+        self.scale_by = scale_by
         ### CODE ENDS
         self.root = root
         self.normal_channel = normal_channel
@@ -352,9 +346,14 @@ class ACDSelfSupDataset(Dataset):
         ### CODE STARTS
         # Decide whether or not to perturb the point cloud
         perturb = False
-        if self.perturb_amount > 0.0 and random.uniform(0, 1) <= self.perturb_amount:
+        scale = False
+        rotate = False
+        if self.perturb_amount > 0.0 and random.uniform(0, 1) < self.perturb_amount:
             perturb = True
-
+        if self.scale_by > 1.0:
+            scale = True
+        # if self.rotate_by > 0.0:
+        #     rotate = True
         # Perturbation Type #1 --- randomly drop off an ACD component
         if perturb:
             rand_seg = random.randint(np.min(seg), np.max(seg))
@@ -365,9 +364,16 @@ class ACDSelfSupDataset(Dataset):
         else:
             valid_cls = np.array([1])
         # Perturbation Type #2 --- randomly scale an ACD component
+        if perturb and scale:
+            #scale_by
+            rand_seg = random.randint(np.min(seg), np.max(seg))
+            seg_points = seg == rand_seg
+            point_set[seg_points] = point_set[seg_points] * self.scale_by
+            valid_cls = np.array([0])
+        else:
+            valid_cls = np.array([1])
 
         # Perturbation Type #3 --- randomly rigidly rotate an ACD component
-
         ### CODE ENDS
 
 

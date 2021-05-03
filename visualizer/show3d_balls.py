@@ -213,7 +213,7 @@ if __name__ == '__main__':
     root = '../data/ACDv2'
     ### CODE STARTS
     dataset1 = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False)
-    dataset2 = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False, perturb_amount=1.0)
+    dataset2 = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False, perturb_amount=1.0, scale_by=2.5)
     ### CODE ENDS
 
     idx = np.random.randint(0, len(dataset1))

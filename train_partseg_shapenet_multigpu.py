@@ -400,7 +400,7 @@ def main(args):
             classifier = classifier.train()            
 
             '''applying supervised cross-entropy loss'''
-            seg_pred, trans_feat, feat = classifier(points.contiguous(), category_label)
+            seg_pred, trans_feat, feat, _ = classifier(points.contiguous(), category_label)
             seg_pred = seg_pred.contiguous().view(-1, num_part)
             target = target.view(-1, 1)[:, 0]
             pred_choice = seg_pred.data.max(1)[1]
