@@ -213,12 +213,14 @@ if __name__ == '__main__':
     root = '../data/ACDv2'
     ### CODE STARTS
     dataset1 = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False)
-    dataset2 = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False, perturb_amount=1.0, scale_by=2.5)
+    dataset2 = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False, perturb_amount=1.0)
+    dataset2a = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False, scale_by=2.5)
+    dataset2b = ACDSelfSupDataset(root = root, npoints=2048, normal_channel=False, rotate_by=90)
     ### CODE ENDS
 
     idx = np.random.randint(0, len(dataset1))
 
-    for dset in [dataset1, dataset2]:
+    for dset in [dataset1, dataset2, dataset2a, dataset2b]:
         data = dset[idx]
         point_set, _, seg, _ = data
         choice = np.random.choice(point_set.shape[0], opt.npoints, replace=True)

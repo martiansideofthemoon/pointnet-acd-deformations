@@ -7,6 +7,7 @@ import numpy as np
 import random
 import math
 from torch.utils.data import Dataset
+from scipy.spatial.transform import Rotation as R
 warnings.filterwarnings('ignore')
 
 
@@ -127,13 +128,6 @@ class PartNormalDataset(Dataset):
     def __len__(self):
         return len(self.datapath)
 
-
-
-
-
-
-
-
 class SelfSupPartNormalDataset(Dataset):
     def __init__(self, root = './data/shapenetcore_partanno_segmentation_benchmark_v0_normal', 
                  npoints=2500, split='train', class_choice=None, normal_channel=False, 
@@ -247,7 +241,7 @@ class ACDSelfSupDataset(Dataset):
     def __init__(self, root = './data/ACDv2', 
                  npoints=2500, class_choice=None, normal_channel=False, 
                  k_shot=-1, exclude_fns=[], splits=None, use_val=False,
-                 perturb_amount=1.0, scale_by=2.5):
+                 perturb_amount=1.0, scale_by=2.5, rotate_by=90):
         '''
             Expected self-supervised dataset folder structure:
 
@@ -269,6 +263,7 @@ class ACDSelfSupDataset(Dataset):
         ### CODE STARTS
         self.perturb_amount = perturb_amount
         self.scale_by = scale_by
+        self.rotate_by = rotate_by
         ### CODE ENDS
         self.root = root
         self.normal_channel = normal_channel
@@ -347,13 +342,13 @@ class ACDSelfSupDataset(Dataset):
         # Decide whether or not to perturb the point cloud
         perturb = False
         scale = False
-        rotate = False
+        rotate = True
         if self.perturb_amount > 0.0 and random.uniform(0, 1) < self.perturb_amount:
             perturb = True
         if self.scale_by > 1.0:
             scale = True
-        # if self.rotate_by > 0.0:
-        #     rotate = True
+        if self.rotate_by > 0.0:
+            rotate = True
         # Perturbation Type #1 --- randomly drop off an ACD component
         if perturb:
             rand_seg = random.randint(np.min(seg), np.max(seg))
@@ -374,6 +369,19 @@ class ACDSelfSupDataset(Dataset):
             valid_cls = np.array([1])
 
         # Perturbation Type #3 --- randomly rigidly rotate an ACD component
+        if perturb and rotate:
+            #rotate_by = 90
+            rotation_radians = np.radians(self.rotate_by)
+            rotation_axis = np.array([0, 0, 1]) #TODO: do we want to fix this?
+            rotation_vector = rotation_radians * rotation_axis
+            rotation = R.from_rotvec(rotation_vector)
+            rand_seg = random.randint(np.min(seg), np.max(seg))
+            seg_points = seg == rand_seg
+            point_set[seg_points] = rotation.apply(point_set[seg_points])
+            valid_cls = np.array([0])
+        else:
+            valid_cls = np.array([1])
+
         ### CODE ENDS
 
 
