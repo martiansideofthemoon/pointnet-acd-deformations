@@ -434,9 +434,12 @@ def main(args):
         log_string('Validation: ACD on ShapeNet')
         with torch.no_grad():
             total_val_loss = 0
-            for batch_id, (points, label, target) in tqdm(enumerate(selfsupValLoader),
-                                                          total=len(selfsupValLoader),
-                                                          smoothing=0.9):
+            total_val_valid_shape_loss = 0
+            ### CODE STARTS
+            for batch_id, (points, label, target, valid_shape_label) in tqdm(enumerate(selfsupValLoader),
+                                                                             total=len(selfsupValLoader),
+                                                                             smoothing=0.9):
+            ### CODE ENDS
                 if DEBUG and i > 10:
                     break
                 cur_batch_size, NUM_POINT, _ = points.size()
@@ -444,11 +447,17 @@ def main(args):
                 points = points.transpose(2, 1)
                 category_label = torch.zeros([label.shape[0], 1, num_classes]).cuda()
                 classifier = classifier.eval()
-                _, _, feat, _ = classifier(points, category_label)
+                ### CODE STARTS
+                _, _, feat, agg_valid_feats = classifier(points, category_label) # feat: [bs x ndim x npts]
+                valid_shape_loss = valid_shape_criterion(agg_valid_feats, valid_shape_label.squeeze(dim=1))
+                total_val_valid_shape_loss += valid_shape_loss.cpu().item()
                 val_loss = selfsupCriterion(feat, target)
                 total_val_loss += val_loss.data.cpu().item()
             avg_val_loss = total_val_loss / len(selfsupValLoader)
+            avg_val_valid_shape_loss = total_val_valid_shape_loss / len(selfsupValLoader)
         log_value('selfsup_loss_val', avg_val_loss, epoch)
+        log_value('val valid shape loss', avg_val_valid_shape_loss, epoch)
+        ### CODE ENDS
 
 
         '''(optional) validation on ModelNet40'''
