@@ -400,7 +400,7 @@ def main(args):
             classifier = classifier.train()            
 
             '''applying supervised cross-entropy loss'''
-            seg_pred, trans_feat, feat = classifier(points.contiguous(), category_label)
+            seg_pred, trans_feat, feat, _ = classifier(points.contiguous(), category_label)
             seg_pred = seg_pred.contiguous().view(-1, num_part)
             target = target.view(-1, 1)[:, 0]
             pred_choice = seg_pred.data.max(1)[1]
@@ -423,7 +423,7 @@ def main(args):
                     selfsupIterator = iter(selfsupDataLoader)
                     data_ss = next(selfsupIterator)
 
-                points, label, target = data_ss
+                points, label, target, _ = data_ss
                 points = points.data.numpy()
                 points[:,:, 0:3] = provider.random_scale_point_cloud(points[:,:, 0:3])
                 points[:,:, 0:3] = provider.shift_point_cloud(points[:,:, 0:3])
@@ -442,7 +442,7 @@ def main(args):
                 classifier = classifier.train()
 
                 '''applying self-supervised constrastive (pairwise) loss'''
-                _, _, feat = classifier(points, category_label)
+                _, _, feat, _ = classifier(points, category_label)
                 ss_loss = selfsupCriterion(feat, target) * lmbda
                 ss_loss.backward()
                 optimizer.step()
@@ -507,7 +507,7 @@ def main(args):
                 category_label = torch.zeros([label.shape[0], 1, num_classes]).cuda()
 
             classifier = classifier.eval()
-            seg_pred, _, _ = classifier(points, to_categorical(label, num_classes))
+            seg_pred, _, _, _ = classifier(points, to_categorical(label, num_classes))
             cur_pred_val = seg_pred.cpu().data.numpy()
             cur_pred_val_logits = cur_pred_val
             cur_pred_val = np.zeros((cur_batch_size, NUM_POINT)).astype(np.int32)
