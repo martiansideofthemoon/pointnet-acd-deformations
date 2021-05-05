@@ -241,7 +241,7 @@ class ACDSelfSupDataset(Dataset):
     def __init__(self, root = './data/ACDv2', 
                  npoints=2500, class_choice=None, normal_channel=False, 
                  k_shot=-1, exclude_fns=[], splits=None, use_val=False,
-                 perturb_amount=1.0, scale_by=2.5, rotate_by=90):
+                 perturb_amount=1.0, scale_by=[0.125, 0.25, 4, 8], rotate_by=[45, 90, 135, 180, 225, 270, 315], perturb_types="scale,rotate,drop"):
         '''
             Expected self-supervised dataset folder structure:
 
@@ -264,6 +264,7 @@ class ACDSelfSupDataset(Dataset):
         self.perturb_amount = perturb_amount
         self.scale_by = scale_by
         self.rotate_by = rotate_by
+        self.perturb_types = perturb_types.split(",")
         ### CODE ENDS
         self.root = root
         self.normal_channel = normal_channel
@@ -341,49 +342,52 @@ class ACDSelfSupDataset(Dataset):
         ### CODE STARTS
         # Decide whether or not to perturb the point cloud
         perturb = False
-        scale = False
-        rotate = True
         if self.perturb_amount > 0.0 and random.uniform(0, 1) < self.perturb_amount:
             perturb = True
-        if self.scale_by > 1.0:
-            scale = True
-        if self.rotate_by > 0.0:
-            rotate = True
-        # Perturbation Type #1 --- randomly drop off an ACD component
+
         if perturb:
+            perturb_type = random.choice(self.perturb_types)
+        else:
+            perturb_type = None
+
+        if perturb_type == "drop":
+            # Perturbation Type #1 --- randomly drop off an ACD component
             rand_seg = random.randint(np.min(seg), np.max(seg))
             other_pts = seg != rand_seg
             point_set = point_set[other_pts]
             seg = seg[other_pts]
             valid_cls = np.array([0])
-        else:
-            valid_cls = np.array([1])
-        # Perturbation Type #2 --- randomly scale an ACD component
-        if perturb and scale:
-            #scale_by
+
+        elif perturb_type == "scale":
+            # Perturbation Type #2 --- randomly scale an ACD component
             rand_seg = random.randint(np.min(seg), np.max(seg))
             seg_points = seg == rand_seg
-            point_set[seg_points] = point_set[seg_points] * self.scale_by
+            centroid = point_set[seg_points].mean(axis=0)
+            scale_amt = random.choice(self.scale_by)
+            # scaling is done via the centroid
+            point_set[seg_points] = centroid + (point_set[seg_points] - centroid) * scale_amt
             valid_cls = np.array([0])
-        else:
-            valid_cls = np.array([1])
 
-        # Perturbation Type #3 --- randomly rigidly rotate an ACD component
-        if perturb and rotate:
-            #rotate_by = 90
-            rotation_radians = np.radians(self.rotate_by)
-            rotation_axis = np.array([0, 0, 1]) #TODO: do we want to fix this?
+        elif perturb_type == "rotate":
+            # Perturbation Type #3 --- randomly rigidly rotate an ACD component
+            # Choose a random rotation amount in intervals of 45 degrees
+            rotation_radians = np.radians(random.choice(self.rotate_by))
+            # Choose a random rotation vector
+            rotation_axis = np.random.rand(3)
+            rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+            # magnitude of vector represents the amount of rotation
             rotation_vector = rotation_radians * rotation_axis
             rotation = R.from_rotvec(rotation_vector)
             rand_seg = random.randint(np.min(seg), np.max(seg))
             seg_points = seg == rand_seg
-            point_set[seg_points] = rotation.apply(point_set[seg_points])
+            centroid = point_set[seg_points].mean(axis=0)
+            point_set[seg_points] = centroid + rotation.apply(point_set[seg_points] - centroid)
             valid_cls = np.array([0])
+
         else:
             valid_cls = np.array([1])
 
         ### CODE ENDS
-
 
         point_set[:, 0:3] = pc_normalize(point_set[:, 0:3])
 

@@ -94,6 +94,7 @@ def parse_args():
 
     ### CODE STARTS
     parser.add_argument('--perturb_amount', type=float,  default=0.0, help='few shot samples [default: -1, all samples]')
+    parser.add_argument('--perturb_types', type=str,  default='scale,rotate,drop', help='perform scaling / rotation / part dropping')
     ### CODE ENDS
 
     return parser.parse_args()
@@ -211,6 +212,7 @@ def main(args):
                                                 normal_channel=args.normal,
                                                 k_shot=args.n_cls_selfsup,
                                                 exclude_fns=labeled_fns,
+                                                perturb_types=args.perturb_types,
                                                 perturb_amount=args.perturb_amount,
                                                 use_val = True)
             ### CODE ENDS
@@ -222,6 +224,7 @@ def main(args):
                                         normal_channel=args.normal, class_choice='Airplane',
                                         k_shot=args.n_cls_selfsup, use_val=False,
                                         perturb_amount=args.perturb_amount,
+                                        perturb_types=args.perturb_types,
                                         exclude_fns=selfsup_train_fns + labeled_fns)
             ### CODE ENDS
             log_string('\t %d samples' % len(SELFSUP_VAL))
