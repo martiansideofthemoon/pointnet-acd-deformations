@@ -138,3 +138,6 @@ dmypy.json
 cython_debug/
 data/
 log/
+saved_models/
+logs/
+slurm-schedulers/

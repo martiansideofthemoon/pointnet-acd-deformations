@@ -381,6 +381,7 @@ class ACDSelfSupDataset(Dataset):
             rand_seg = random.randint(np.min(seg), np.max(seg))
             seg_points = seg == rand_seg
             centroid = point_set[seg_points].mean(axis=0)
+            # rotation is done centering on centroid of ACD component
             point_set[seg_points] = centroid + rotation.apply(point_set[seg_points] - centroid)
             valid_cls = np.array([0])
 
