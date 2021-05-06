@@ -123,7 +123,7 @@ def parse_args():
     # self-supervised loss setting
     parser.add_argument('--selfsup', action='store_true', default=False, help='use self-sup data [default: False]')
     parser.add_argument('--margin', type=float,  default=0.5, help='contrastive loss margin [default: 0.5]')
-    parser.add_argument('--lmbda', type=float,  default=10.0, help='weight on self-sup loss [default: 10]')
+    parser.add_argument('--valid_shape_loss_lmbda', type=float,  default=10.0, help='weight on valid shape loss [default: 10]')
     parser.add_argument('--n_cls_selfsup', type=int,  default=-1, help='self-sup samples per class [default: -1, all samples]')
     parser.add_argument('--ss_dataset', type=str, default='acd', help='self-sup dataset [default: acd]')
     parser.add_argument('--ss_path', type=str, default='/srv/data2/mgadelha/ShapeNetACD/', help='self-sup dataset location [default: dummy]')
@@ -136,7 +136,11 @@ def parse_args():
     parser.add_argument('--k_shot', type=int,  default=-1, help='few shot samples [default: -1, all samples]')
     parser.add_argument('--pretrained', type=str, default=None, help='pre-trained model path [default: None]')
     parser.add_argument('--init_cls', action='store_true', default=False, help='pre-train classifier layers [default: False]')
-
+    ### CODE STARTS
+    parser.add_argument('--perturb_amount', type=float,  default=0.0, help='few shot samples [default: -1, all samples]')
+    parser.add_argument('--job_id', type=str,  default="test", help='Experiment ID')
+    parser.add_argument('--perturb_types', type=str,  default='scale,rotate,drop', help='perform scaling / rotation / part dropping')
+    ### CODE ENDS
     return parser.parse_args()
 
 
@@ -187,6 +191,16 @@ def main(args):
         experiment_dir = experiment_dir.joinpath(dir_name)
         # else:
         #     experiment_dir = experiment_dir.joinpath(args.log_dir)
+
+    ### CODE STARTS
+    if args.perturb_amount:
+        dir_name = dir_name + f"{args.perturb_amount:.2f}_perturb_amount"
+
+    if args.job_id is not None:
+        experiment_dir = Path(f"saved_models/model_{args.job_id}")
+    else:
+        experiment_dir = experiment_dir.joinpath(dir_name)
+    ### CODE ENDS
 
     experiment_dir.mkdir(exist_ok=True)
     checkpoints_dir = experiment_dir.joinpath('checkpoints/')
@@ -249,18 +263,19 @@ def main(args):
         elif args.ss_dataset == 'acd':
             log_string('Using "ACD" self-supervision dataset (ShapeNet Seg)')
             ACD_ROOT = args.ss_path
-            SELFSUP_DATASET = ACDSelfSupDataset(root = ACD_ROOT, npoints=args.npoint, 
-                                                normal_channel=args.normal, 
-                                                k_shot=args.n_cls_selfsup, 
-                                                exclude_fns=labeled_fns)
-
+            ### CODE STARTS
+            SELFSUP_DATASET = ACDSelfSupDataset(root = ACD_ROOT, npoints=args.npoint,
+                                                normal_channel=args.normal,
+                                                k_shot=args.n_cls_selfsup,
+                                                exclude_fns=labeled_fns,
+                                                perturb_types=args.perturb_types,
+                                                perturb_amount=args.perturb_amount,
+                                                use_val = True)
+            ### CODE ENDS
         selfsupDataLoader = torch.utils.data.DataLoader(SELFSUP_DATASET, 
                                                         batch_size=args.batch_size, 
                                                         shuffle=True, num_workers=4)        
         selfsupIterator = iter(selfsupDataLoader)
-    
-    
-
 
     # --------------------------------------------------------------------------
     '''MODEL LOADING'''
@@ -276,6 +291,9 @@ def main(args):
         classifier = MODEL.get_model(num_part, normal_channel=args.normal).cuda()
 
     criterion = MODEL.get_loss().cuda()
+    ### CODE STARTS
+    valid_shape_criterion = nn.CrossEntropyLoss()
+    ### CODE ENDS
 
     if args.selfsup:
         selfsupCriterion = MODEL.get_selfsup_loss(margin=args.margin).cuda()
@@ -423,12 +441,14 @@ def main(args):
                     selfsupIterator = iter(selfsupDataLoader)
                     data_ss = next(selfsupIterator)
 
-                points, label, target, _ = data_ss
+                points, label, target, valid_shape_label = data_ss
                 points = points.data.numpy()
                 points[:,:, 0:3] = provider.random_scale_point_cloud(points[:,:, 0:3])
                 points[:,:, 0:3] = provider.shift_point_cloud(points[:,:, 0:3])
                 points = torch.Tensor(points)
-                points, label, target = points.float().cuda(), label.long().cuda(), target.long().cuda()
+                ### CODE STARTS
+                points, label, target, valid_shape_label = points.float().cuda(), label.long().cuda(), target.long().cuda(), valid_shape_label.long().cuda()
+                ### CODE ENDS
                 points = points.transpose(2, 1)
                 # for self-sup category label is always unknown, so always zeros:
                 category_label = torch.zeros([label.shape[0], 1, num_classes]).cuda()
@@ -442,9 +462,19 @@ def main(args):
                 classifier = classifier.train()
 
                 '''applying self-supervised constrastive (pairwise) loss'''
-                _, _, feat, _ = classifier(points, category_label)
-                ss_loss = selfsupCriterion(feat, target) * lmbda
-                ss_loss.backward()
+                ### CODE STARTS
+                _, _, feat, agg_valid_feats = classifier(points, category_label) # feat: [bs x ndim x npts]
+                valid_shape_loss = valid_shape_criterion(agg_valid_feats, valid_shape_label.squeeze(dim=1))
+                ss_loss = selfsupCriterion(feat, target)
+
+                if args.perturb_amount > 0.0:
+                    total_loss = ss_loss + valid_shape_loss * args.valid_shape_loss_lmbda
+                else:
+                    total_loss = ss_loss
+
+                total_loss.backward()
+                ### CODE ENDS
+
                 optimizer.step()
 
         # ----------------------------------------------------------------------
@@ -458,6 +488,10 @@ def main(args):
         if args.selfsup:
             log_string('Self-sup loss is: %.5f' % ss_loss.data)
             log_value('selfsup_loss', ss_loss.data, epoch)
+            ### CODE STARTS
+            log_string('Valid shape loss is: %.5f' % valid_shape_loss.data)
+            log_value('valid_shape_loss', valid_shape_loss.data, epoch)
+            ### CODE ENDS
 
         # save every epoch
         savepath = str(checkpoints_dir) + ('/model_%03d.pth' % epoch)

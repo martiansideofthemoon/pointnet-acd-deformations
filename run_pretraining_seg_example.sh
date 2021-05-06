@@ -19,19 +19,12 @@ BASE_DIR=.
 
 echo $HOSTNAME
 
-python $BASE_DIR/pretrain_partseg_shapenet.py \
-    --rotation_z \
-    --seed 1001 \
-    --model pointnet2_part_seg_msg \
-    --batch_size 16 \
-    --step_size 1 \
-    --selfsup \
-    --retain_overlaps \
-    --ss_path data/ACDv2 \
+python pretrain_partseg_shapenet.py \
+    --seed 2001 \
+    --k_shot 5 --batch_size 16 --selfsup --step_size 1  --epoch 9 \
+    --ss_path data/ACDv2/ \
     --perturb_amount 0.5 \
-    --modelnet_val \
     --valid_shape_loss_lmbda 1.0 \
-    --perturb_amount 0.5 \
     --perturb_types scale,rotate,drop \
-    --job_id test_job
+    --job_id test_job_seg
 ### CODE ENDS

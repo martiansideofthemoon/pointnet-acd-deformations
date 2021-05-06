@@ -142,12 +142,13 @@ def main(args):
     ### CODE STARTS
     if args.perturb_amount:
         dir_name = dir_name + f"{args.perturb_amount:.2f}_perturb_amount"
-    ### CODE ENDS
 
     if args.job_id is not None:
         experiment_dir = Path(f"saved_models/model_{args.job_id}")
     else:
         experiment_dir = experiment_dir.joinpath(dir_name)
+    ### CODE ENDS
+
 
     experiment_dir.mkdir(exist_ok=True)
     checkpoints_dir = experiment_dir.joinpath('checkpoints/')
@@ -255,12 +256,10 @@ def main(args):
     shutil.copy('models/%s.py' % args.model, str(experiment_dir))
     shutil.copy('models/pointnet_util.py', str(experiment_dir))
 
-    ### CODE STARTS
     if args.model == 'dgcnn':
         classifier = MODEL.get_model(num_part, normal_channel=args.normal, k=args.dgcnn_k).cuda()
     else:
         classifier = MODEL.get_model(num_part, normal_channel=args.normal).cuda()
-    ### CODE ENDS
 
     criterion = MODEL.get_loss().cuda()
     ### CODE STARTS
@@ -363,7 +362,9 @@ def main(args):
             if DEBUG and i > 10:
                 break
 
+            ### CODE STARTS
             points, label, target, valid_shape_label = data_ss  # (points: bs x 3 x n_pts, label: bs x 1, target: bs x n_pts)
+            ### CODE ENDS
             points = points.data.numpy()
             points[:,:, 0:3] = provider.random_scale_point_cloud(points[:,:, 0:3])
             points[:,:, 0:3] = provider.shift_point_cloud(points[:,:, 0:3])
@@ -384,7 +385,9 @@ def main(args):
 
             points = torch.Tensor(points)
             points, label, target = points.float().cuda(), label.long().cuda(), target.long().cuda()
+            ### CODE STARTS
             valid_shape_label = valid_shape_label.long().cuda()
+            ### CODE ENDS
             points = points.transpose(2, 1)
             # np.save(osp.join(experiment_dir, 'pts_z-rot.npy'), points.cpu().numpy())
             # np.save(osp.join(experiment_dir, 'target.npy'), target.cpu().numpy())
@@ -404,14 +407,15 @@ def main(args):
                 total_loss = ss_loss + valid_shape_loss * args.valid_shape_loss_lmbda
             else:
                 total_loss = ss_loss
-            ### CODE ENDS
 
             total_loss.backward()
+
             optimizer.step()
             mean_ss_loss.append(ss_loss.item())
             mean_valid_shp_loss.append(valid_shape_loss.item())
             log_value('selfsup_loss_iter', ss_loss.data, epoch*num_iters + i + 1)
             log_value('valid_loss_iter', valid_shape_loss.data, epoch*num_iters + i + 1)
+            ### CODE ENDS
 
         train_loss_epoch = np.mean(mean_ss_loss)
         log_string('Self-sup loss for epoch is: %.5f' % train_loss_epoch)

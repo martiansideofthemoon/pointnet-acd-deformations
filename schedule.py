@@ -32,7 +32,7 @@ other_dependencies = {
 }
 
 
-top_details = "GPT2-medium model for margin generation."
+top_details = "Training PointNet models for ACD + valid shape classification."
 hyperparameters = tables
 
 run_id = int(get_run_id())
@@ -45,8 +45,6 @@ eval_scripts = []
 
 for combo in combinations:
     # Write the scheduler scripts
-    with open("run_pretraining_template.sh", 'r') as f:
-        schedule_script = f.read()
 
     combo = {k[0]: v for (k, v) in zip(key_hyperparameters, combo)}
 
@@ -54,6 +52,16 @@ for combo in combinations:
         combo[k] = v(combo)
 
     od = collections.OrderedDict(sorted(combo.items()))
+
+    if od["downstream_type"] == "modelnet40":
+        script_filename = "run_pretraining_template.sh"
+    else:
+        script_filename = "run_pretraining_seg_template.sh"
+
+    with open(script_filename, 'r') as f:
+        schedule_script = f.read()
+
+    print(f"{script_filename}")
     lower_details = ""
     for k, v in od.items():
         lower_details += "%s = %s, " % (k, str(v))
