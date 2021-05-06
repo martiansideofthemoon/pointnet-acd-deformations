@@ -443,14 +443,14 @@ def main(args):
                 if DEBUG and i > 10:
                     break
                 cur_batch_size, NUM_POINT, _ = points.size()
-                points, label, target = points.float().cuda(), label.long().cuda(), target.long().cuda()
+                points, label, target, valid_shape_label = points.float().cuda(), label.long().cuda(), target.long().cuda(), valid_shape_label.long().cuda()
                 points = points.transpose(2, 1)
                 category_label = torch.zeros([label.shape[0], 1, num_classes]).cuda()
                 classifier = classifier.eval()
                 ### CODE STARTS
                 _, _, feat, agg_valid_feats = classifier(points, category_label) # feat: [bs x ndim x npts]
                 valid_shape_loss = valid_shape_criterion(agg_valid_feats, valid_shape_label.squeeze(dim=1))
-                total_val_valid_shape_loss += valid_shape_loss.cpu().item()
+                total_val_valid_shape_loss += valid_shape_loss.item()
                 val_loss = selfsupCriterion(feat, target)
                 total_val_loss += val_loss.data.cpu().item()
             avg_val_loss = total_val_loss / len(selfsupValLoader)
