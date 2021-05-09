@@ -19,7 +19,7 @@ BASE_DIR=.
 
 echo $HOSTNAME
 
-python pretrain_partseg_shapenet.py \
+python train_partseg_shapenet_multigpu.py \
     --seed 2001 \
     --k_shot 5 --batch_size 16 --selfsup --step_size 1  --epoch 9 \
     --ss_path data/ACDv2/ \

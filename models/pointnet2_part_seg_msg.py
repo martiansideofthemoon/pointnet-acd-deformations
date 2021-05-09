@@ -24,7 +24,9 @@ class get_model(nn.Module):
         self.bn1 = nn.BatchNorm1d(128)
         self.drop1 = nn.Dropout(0.5)
         self.conv2 = nn.Conv1d(128, num_classes, 1)
+        ### CODE STARTS
         self.fc_classify = nn.Linear(512, 2)
+        ### CODE ENDS
 
     def forward(self, xyz, cls_label):
         # Set Abstraction layers

@@ -92,6 +92,7 @@ def parse_args():
     # few-shot setting
     parser.add_argument('--k_shot', type=int,  default=-1, help='few shot samples [default: -1, all samples]')
     ### CODE STARTS
+    parser.add_argument('--self_sup_lmbda', type=float,  default=1.0, help='weight on self-supervised [default: 10]')
     parser.add_argument('--perturb_amount', type=float,  default=0.0, help='few shot samples [default: -1, all samples]')
     parser.add_argument('--job_id', type=str,  default="test", help='Experiment ID')
     parser.add_argument('--perturb_types', type=str,  default='scale,rotate,drop', help='perform scaling / rotation / part dropping')
@@ -400,11 +401,12 @@ def main(args):
 
             ### CODE STARTS
             _, _, feat, agg_valid_feats = classifier(points, category_label) # feat: [bs x ndim x npts]
+
             valid_shape_loss = valid_shape_criterion(agg_valid_feats, valid_shape_label.squeeze(dim=1))
             ss_loss = selfsupCriterion(feat, target)
 
             if args.perturb_amount > 0.0:
-                total_loss = ss_loss + valid_shape_loss * args.valid_shape_loss_lmbda
+                total_loss = ss_loss * args.self_sup_lmbda + valid_shape_loss * args.valid_shape_loss_lmbda
             else:
                 total_loss = ss_loss
 
@@ -439,6 +441,8 @@ def main(args):
         with torch.no_grad():
             total_val_loss = 0
             total_val_valid_shape_loss = 0
+            total_val_acc = 0
+            total_insts = 0
             ### CODE STARTS
             for batch_id, (points, label, target, valid_shape_label) in tqdm(enumerate(selfsupValLoader),
                                                                              total=len(selfsupValLoader),
@@ -457,10 +461,14 @@ def main(args):
                 total_val_valid_shape_loss += valid_shape_loss.item()
                 val_loss = selfsupCriterion(feat, target)
                 total_val_loss += val_loss.data.cpu().item()
+                total_val_acc += (valid_shape_label.squeeze() == torch.argmax(agg_valid_feats, dim=1)).sum().item()
+                total_insts += len(valid_shape_label)
             avg_val_loss = total_val_loss / len(selfsupValLoader)
             avg_val_valid_shape_loss = total_val_valid_shape_loss / len(selfsupValLoader)
+            avg_val_valid_shape_acc = float(total_val_acc) / total_insts
         log_value('selfsup_loss_val', avg_val_loss, epoch)
         log_value('val valid shape loss', avg_val_valid_shape_loss, epoch)
+        log_value('val valid shape acc', avg_val_valid_shape_acc, epoch)
         ### CODE ENDS
 
 
@@ -517,11 +525,12 @@ def main(args):
 
         log_value('train_lr', lr, epoch)
         log_value('train_bn_momentum', momentum, epoch)
-
-        log_string('Epoch %d Self-sup train loss: %f  Val loss: %f ' % (epoch+1,
-                                                                        train_loss_epoch,
-                                                                        avg_val_loss))
-
+        ### CODE STARTS
+        log_string('Epoch %d Self-sup train loss: %f  Val loss: %f Val valid shape acc %f' % (epoch+1,
+                                                                                              train_loss_epoch,
+                                                                                              avg_val_loss,
+                                                                                              avg_val_valid_shape_acc))
+        ### CODE ENDS
         global_epoch+=1
 
 

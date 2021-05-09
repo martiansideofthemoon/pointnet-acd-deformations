@@ -30,6 +30,7 @@ python pretrain_partseg_shapenet.py \
     --ss_path data/ACDv2 \
     --modelnet_val \
     --valid_shape_loss_lmbda {valid_shape_loss_lmbda} \
+    --self_sup_lmbda {self_sup_lmbda} \
     --perturb_amount {perturb_amount} \
     --perturb_types {perturb_types} \
     --job_id {job_id}

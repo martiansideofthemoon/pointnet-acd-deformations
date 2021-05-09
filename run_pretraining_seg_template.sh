@@ -19,11 +19,12 @@ BASE_DIR=.
 cd /mnt/nfs/work1/miyyer/kalpesh/projects/PointCloudLearningACD
 echo $HOSTNAME
 
-python pretrain_partseg_shapenet.py \
+python train_partseg_shapenet_multigpu.py \
     --seed 2001 \
     --k_shot 5 --batch_size 16 --selfsup --step_size 1  --epoch 9 \
     --ss_path data/ACDv2/ \
     --valid_shape_loss_lmbda {valid_shape_loss_lmbda} \
+    --self_sup_lmbda {self_sup_lmbda} \
     --perturb_amount {perturb_amount} \
     --perturb_types {perturb_types} \
     --job_id {job_id}

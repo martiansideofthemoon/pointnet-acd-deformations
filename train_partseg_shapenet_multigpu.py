@@ -123,7 +123,6 @@ def parse_args():
     # self-supervised loss setting
     parser.add_argument('--selfsup', action='store_true', default=False, help='use self-sup data [default: False]')
     parser.add_argument('--margin', type=float,  default=0.5, help='contrastive loss margin [default: 0.5]')
-    parser.add_argument('--valid_shape_loss_lmbda', type=float,  default=10.0, help='weight on valid shape loss [default: 10]')
     parser.add_argument('--n_cls_selfsup', type=int,  default=-1, help='self-sup samples per class [default: -1, all samples]')
     parser.add_argument('--ss_dataset', type=str, default='acd', help='self-sup dataset [default: acd]')
     parser.add_argument('--ss_path', type=str, default='/srv/data2/mgadelha/ShapeNetACD/', help='self-sup dataset location [default: dummy]')
@@ -137,6 +136,8 @@ def parse_args():
     parser.add_argument('--pretrained', type=str, default=None, help='pre-trained model path [default: None]')
     parser.add_argument('--init_cls', action='store_true', default=False, help='pre-train classifier layers [default: False]')
     ### CODE STARTS
+    parser.add_argument('--valid_shape_loss_lmbda', type=float,  default=10.0, help='weight on valid shape loss [default: 10]')
+    parser.add_argument('--self_sup_lmbda', type=float,  default=1.0, help='weight on self-supervised [default: 10]')
     parser.add_argument('--perturb_amount', type=float,  default=0.0, help='few shot samples [default: -1, all samples]')
     parser.add_argument('--job_id', type=str,  default="test", help='Experiment ID')
     parser.add_argument('--perturb_types', type=str,  default='scale,rotate,drop', help='perform scaling / rotation / part dropping')
@@ -182,7 +183,7 @@ def main(args):
             dir_name = dir_name + '_category-label'
         if args.selfsup:
             dir_name = dir_name + '_selfsup-%s_margin-%.2f_lambda-%.2f' \
-                        % (args.ss_dataset, args.margin, args.lmbda)
+                        % (args.ss_dataset, args.margin, args.valid_shape_loss_lmbda)
         if args.anneal_lambda:
             dir_name = dir_name + '_anneal-lambda_step-%d_rate-%.2f' \
                         % (args.anneal_step, args.anneal_rate)
@@ -379,10 +380,10 @@ def main(args):
         classifier = classifier.apply(lambda x: bn_momentum_adjust(x,momentum))
 
         ''' Adjust (anneal) self-sup lambda '''
-        if args.anneal_lambda:
-            lmbda = args.lmbda * (args.anneal_rate ** (epoch // args.anneal_step))
-        else:
-            lmbda = args.lmbda
+        # if args.anneal_lambda:
+        #     lmbda = args.lmbda * (args.anneal_rate ** (epoch // args.anneal_step))
+        # else:
+        #     lmbda = args.lmbda
 
         '''learning one epoch'''
         num_iters = len(trainDataLoader) # num iters in an epoch
@@ -468,7 +469,7 @@ def main(args):
                 ss_loss = selfsupCriterion(feat, target)
 
                 if args.perturb_amount > 0.0:
-                    total_loss = ss_loss + valid_shape_loss * args.valid_shape_loss_lmbda
+                    total_loss = ss_loss * args.self_sup_lmbda + valid_shape_loss * args.valid_shape_loss_lmbda
                 else:
                     total_loss = ss_loss
 
@@ -507,7 +508,7 @@ def main(args):
         log_value('train_acc', train_instance_acc, epoch)
         log_value('train_lr', lr, epoch)
         log_value('train_bn_momentum', momentum, epoch)
-        log_value('selfsup_lambda', lmbda, epoch)
+        # log_value('selfsup_lambda', lmbda, epoch)
 
         global_epoch+=1
 
