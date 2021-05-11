@@ -12,15 +12,15 @@ All our pretrained models can be found on Gypsum UMass Amherst clusters at the p
 
 Part segmentation jobs ---
 
-1. `model_16` --- CONTRAST
-2. `model_17`, `model_18`, `model_19`, `model_20` --- PERTURB-DROP, PERTURB-SCALE, PERTURB-ROTATE, PERTURB-ALL
-3. `model_21`, `model_22`, `model_23`, `model_24` --- Interpolation between CONTRAST and PERTURB-ALL, with `lambda=0.1,1.0,10,100`.
+1. `model_16` --- `CONTRAST`
+2. `model_17`, `model_18`, `model_19`, `model_20` --- `PERTURB-DROP`, `PERTURB-SCALE`, `PERTURB-ROTATE`, `PERTURB-ALL`
+3. `model_21`, `model_22`, `model_23`, `model_24` --- Interpolation between `CONTRAST` and `PERTURB-ALL`, with `lambda=0.1,1.0,10,100`.
 
 ModelNet40 / binary classification jobs ---
 
-1. `model_4` --- CONTRAST
-2. `model_26`, `model_27`, `model_28`, `model_29` --- PERTURB-DROP, PERTURB-SCALE, PERTURB-ROTATE, PERTURB-ALL
-3. `model_30`, `model_31`, `model_32`, `model_33` --- Interpolation between CONTRAST and PERTURB-ALL, with `lambda=0.1,1.0,10,100`.
+1. `model_4` --- `CONTRAST`
+2. `model_26`, `model_27`, `model_28`, `model_29` --- `PERTURB-DROP`, `PERTURB-SCALE`, `PERTURB-ROTATE`, `PERTURB-ALL`
+3. `model_30`, `model_31`, `model_32`, `model_33` --- Interpolation between `CONTRAST` and `PERTURB-ALL`, with `lambda=0.1,1.0,10,100`.
 
 ## Evaluating Pretrained Models
 
