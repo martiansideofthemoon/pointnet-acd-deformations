@@ -2,6 +2,10 @@
 
 This repository is a fork from [matheusgadelha/PointCloudLearningACD](https://github.com/matheusgadelha/PointCloudLearningACD), implementing our course project for the COMPSCI674 class on Intelligent Visual Computing (the project is done by Kalpesh Krishna, Melnita Manuel Dabre and Chinmay Shirore). Our key idea is train a discriminator to classify between real and fake 3D point clouds, and use those representations for downstream tasks like unsupervised shape classification and few-shot part segmentation. You can find our report in [report.pdf](report.pdf).
 
+## Team Member Contributions
+
+This has been provided in the `../README.txt` file added with the project submission in root folder, along with report/video/slides/models. All code modifications have been encapsulated in a `### CODE STARTS` and `### CODE ENDS` in the codebase.
+
 ## Setup
 
 Please follow the setup in [matheusgadelha/PointCloudLearningACD](https://github.com/matheusgadelha/PointCloudLearningACD). If you have access to the Gypsum UMass Amherst clusters, you can find the preprocessed data in `/mnt/nfs/work1/miyyer/kalpesh/projects/PointCloudLearningACD/data`.
