@@ -4,7 +4,7 @@ This repository is a fork from [matheusgadelha/PointCloudLearningACD](https://gi
 
 ## Team Member Contributions
 
-This has been provided in the `../README.txt` file added with the project submission in root folder, along with report/video/slides/models. All code modifications have been encapsulated in a `### CODE STARTS` and `### CODE ENDS` in the codebase.
+This has been provided in the `../README.md` file added with the project submission in root folder, along with report/video/slides/models. All code modifications have been encapsulated in a `### CODE STARTS` and `### CODE ENDS` in the codebase.
 
 ## Setup
 
