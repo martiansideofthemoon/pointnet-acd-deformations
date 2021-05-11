@@ -342,6 +342,7 @@ class ACDSelfSupDataset(Dataset):
         ### CODE STARTS
         # Decide whether or not to perturb the point cloud
         perturb = False
+
         if self.perturb_amount > 0.0 and random.uniform(0, 1) < self.perturb_amount:
             perturb = True
 
@@ -387,7 +388,6 @@ class ACDSelfSupDataset(Dataset):
 
         else:
             valid_cls = np.array([1])
-
         ### CODE ENDS
 
         point_set[:, 0:3] = pc_normalize(point_set[:, 0:3])
