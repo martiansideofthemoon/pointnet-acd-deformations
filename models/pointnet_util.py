@@ -39,6 +39,34 @@ def square_distance(src, dst):
     dist += torch.sum(dst ** 2, -1).view(B, 1, M)
     return dist
 
+### CODE STARTS
+def nn_search(src, dst):
+    """
+    Finds the nearest neighbour of each point in src wrt the distance metric
+    resuired for chamfer_distance.
+    """
+    N, M = src.shape
+    idx = torch.zeros((N, 1), dtype = int)
+    dist = torch.zeros((N, 1))
+    for i in range(0, N):
+        d = torch.sum(torch.norm(dst[:, :] - src[i, :], dim=1) ** 2)
+        dist[i] = torch.min(d)
+        idx[i] = torch.argmin(d)
+    return dist, idx
+    
+
+def chamfer_distance(src, dst):
+    """
+    Calculate the Chamfer Distance between two point clouds.
+    For each point in the src point cloud, find the closest point in the dst point cloud,
+    and compute the distance between these points.
+    Returns the summation of chamfer distance both ways, i.e from src to dst and dst to src.
+    """
+    src_nn = nn_search(src, dst)
+    dst_nn = nn_search(dst, src)
+    return torch.mean(src_nn[0]) + torch.mean(dst_nn[0])
+### CODE ENDS
+
 
 def index_points(points, idx):
     """
